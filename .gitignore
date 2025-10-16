@@ -1,0 +1,86 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+!.env.production.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+/lib/generated/prisma
+
+# Database files (local development only)
+*.sql
+!/update_existing_database.sql
+
+# Agenda files (development planning)
+agenda_*.md
+
+# Development scripts (local tools only)
+/scripts/
+!/scripts/update_database.js
+!/scripts/create_missing_tables.js
+!/scripts/verify_tables.js
+
+# Database exports and backups
+*_export.sql
+*_backup.sql
+hikaricha_database_export.sql
+!planetscale_import.sql
+
+# Local development logs
+logs/
+*.log
+
+# Local development cache
+.cache/
+.temp/
+
+# Test data and temp files
+test-data/
+temp/
+*.tmp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Package manager lock files (keep one)
+package-lock.json
+yarn.lock
+.pnpm-lock.yaml
+
+.env.local
+cookies.txt
+database-exports/

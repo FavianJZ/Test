@@ -1,0 +1,582 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              user    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Account_userId_fkey")
+
+  @@unique([provider, providerAccountId], map: "Account_provider_providerAccountId_key")
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model achievement {
+  id           String           @id
+  userId       String
+  type         achievement_type
+  title        String
+  description  String?          @db.Text
+  targetValue  Int
+  currentValue Int              @default(0)
+  isCompleted  Boolean          @default(false)
+  completedAt  DateTime?
+  rewards      String?          @db.LongText
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime
+  user         user             @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Achievement_userId_fkey")
+
+  @@unique([userId, type], map: "Achievement_userId_type_key")
+}
+
+model activity {
+  id          String        @id
+  userId      String
+  type        activity_type
+  title       String
+  description String?       @db.Text
+  metadata    String?       @db.LongText
+  createdAt   DateTime      @default(now())
+  user        user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Activity_userId_fkey")
+
+  @@index([userId], map: "Activity_userId_fkey")
+}
+
+model border {
+  id           String         @id
+  name         String
+  description  String?        @db.Text
+  imageUrl     String
+  price        Int?
+  rarity       border_rarity
+  isActive     Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  borderunlock borderunlock[]
+}
+
+model borderunlock {
+  id         String                  @id
+  userId     String
+  borderId   String
+  unlockType borderunlock_unlockType
+  unlockedAt DateTime                @default(now())
+  pricePaid  Int?
+  border     border                  @relation(fields: [borderId], references: [id], onDelete: Cascade, map: "BorderUnlock_borderId_fkey")
+  user       user                    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "BorderUnlock_userId_fkey")
+
+  @@unique([userId, borderId], map: "BorderUnlock_userId_borderId_key")
+  @@index([borderId], map: "BorderUnlock_borderId_fkey")
+}
+
+model pointtransaction {
+  id          String                @id
+  userId      String
+  type        pointtransaction_type
+  amount      Int
+  description String?               @db.Text
+  metadata    String?               @db.LongText
+  createdAt   DateTime              @default(now())
+  user        user                  @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PointTransaction_userId_fkey")
+
+  @@index([userId], map: "PointTransaction_userId_fkey")
+}
+
+model session {
+  id           String   @id
+  sessionToken String   @unique(map: "Session_sessionToken_key")
+  userId       String
+  expires      DateTime
+  user         user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Session_userId_fkey")
+
+  @@index([userId], map: "Session_userId_fkey")
+}
+
+model user {
+  id                       String                     @id
+  name                     String?
+  email                    String                     @unique(map: "User_email_key")
+  emailVerified            DateTime?
+  password                 String?
+  image                    String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  role                     user_role                  @default(USER)
+  bio                      String?                    @db.Text
+  location                 String?
+  points                   Int                        @default(0)
+  selectedBorder           String                     @default("default")
+  customStatus             String?                    @db.VarChar(100)
+  followerCount            Int                        @default(0)
+  followingCount           Int                        @default(0)
+  friendCount              Int                        @default(0)
+  notificationSettings     String?                    @db.LongText
+  postCount                Int                        @default(0)
+  privacySettings          String?                    @db.LongText
+  account                  account[]
+  achievement              achievement[]
+  activity                 activity[]
+  borderunlock             borderunlock[]
+  commentLikes             comment_like[]
+  conversationParticipants conversation_participant[]
+  receivedFriendRequests   FriendRequest[]           @relation("FriendRequestReceiver")
+  sentFriendRequests       FriendRequest[]           @relation("FriendRequestSender")
+  friendships1             friendship[]               @relation("User1Friends")
+  friendships2             friendship[]               @relation("User2Friends")
+  sentMessages             message[]                  @relation("MessageSender")
+  pointtransaction         pointtransaction[]
+  comments                 post_comment[]
+  postLikes                post_like[]
+  session                  session[]
+  socialLinks              social_link[]
+  socialPosts              social_post[]
+  blocked                  user_block[]               @relation("UserBlocked")
+  blockers                 user_block[]               @relation("UserBlockers")
+  followers                user_follow[]              @relation("UserFollowers")
+  following                user_follow[]              @relation("UserFollowing")
+  userprofile              userprofile?
+  userstatus               userstatus?
+}
+
+model verificationtoken {
+  identifier String
+  token      String   @unique(map: "VerificationToken_token_key")
+  expires    DateTime
+
+  @@unique([identifier, token], map: "VerificationToken_identifier_token_key")
+}
+
+model forum_categories {
+  id            Int             @id @default(autoincrement())
+  slug          String          @unique(map: "slug") @db.VarChar(50)
+  name          String          @db.VarChar(100)
+  description   String?         @db.Text
+  color         String?         @default("gray") @db.VarChar(20)
+  icon          String?         @db.VarChar(50)
+  created_at    DateTime        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime        @default(now()) @db.Timestamp(0)
+  forum_threads forum_threads[]
+}
+
+model forum_likes {
+  id          Int                     @id @default(autoincrement())
+  user_id     String                  @db.VarChar(50)
+  target_id   String                  @db.VarChar(20)
+  target_type forum_likes_target_type
+  created_at  DateTime                @default(now()) @db.Timestamp(0)
+
+  @@unique([user_id, target_id, target_type], map: "unique_like")
+  @@index([target_id, target_type], map: "idx_target")
+  @@index([user_id], map: "idx_user")
+}
+
+model forum_replies {
+  id                  String          @id @db.VarChar(20)
+  thread_id           String          @db.VarChar(20)
+  parent_id           String?         @db.VarChar(20)
+  content             String          @db.Text
+  author_id           String          @db.VarChar(50)
+  likes               Int?            @default(0)
+  is_deleted          Boolean?        @default(false)
+  created_at          DateTime        @default(now()) @db.Timestamp(0)
+  updated_at          DateTime        @default(now()) @db.Timestamp(0)
+  forum_threads       forum_threads   @relation(fields: [thread_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "forum_replies_ibfk_1")
+  forum_replies       forum_replies?  @relation("forum_repliesToforum_replies", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "forum_replies_ibfk_2")
+  other_forum_replies forum_replies[] @relation("forum_repliesToforum_replies")
+
+  @@index([parent_id], map: "forum_replies_ibfk_2")
+  @@index([thread_id], map: "forum_replies_ibfk_1")
+}
+
+model forum_threads {
+  id               String           @id @db.VarChar(20)
+  title            String           @db.VarChar(200)
+  content          String           @db.Text
+  excerpt          String?          @db.VarChar(500)
+  category_id      Int
+  author_id        String           @db.VarChar(50)
+  views            Int?             @default(0)
+  likes            Int?             @default(0)
+  replies          Int?             @default(0)
+  is_pinned        Boolean?         @default(false)
+  is_locked        Boolean?         @default(false)
+  is_deleted       Boolean?         @default(false)
+  created_at       DateTime         @default(now()) @db.Timestamp(0)
+  updated_at       DateTime         @default(now()) @db.Timestamp(0)
+  last_reply_at    DateTime?        @db.Timestamp(0)
+  last_reply_by    String?          @db.VarChar(50)
+  forum_replies    forum_replies[]
+  forum_categories forum_categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "forum_threads_ibfk_1")
+  forum_views      forum_views[]
+
+  @@index([category_id], map: "category_id")
+}
+
+model forum_views {
+  id            Int           @id @default(autoincrement())
+  user_id       String?       @db.VarChar(50)
+  thread_id     String        @db.VarChar(20)
+  ip_address    String        @db.VarChar(45)
+  user_agent    String?       @db.Text
+  viewed_at     DateTime      @default(now()) @db.Timestamp(0)
+  forum_threads forum_threads @relation(fields: [thread_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "forum_views_ibfk_1")
+
+  @@index([thread_id, ip_address], map: "idx_thread_ip")
+  @@index([thread_id, user_id], map: "idx_thread_user")
+}
+
+model FriendRequest {
+  id         String         @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     request_status @default(PENDING)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  receiver   user           @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     user           @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model friendship {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+  user1     user     @relation("User1Friends", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     user     @relation("User2Friends", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+}
+
+model conversation {
+  id           String                     @id @default(cuid())
+  type         conversation_type          @default(DIRECT)
+  name         String?                    @db.VarChar(255)
+  description  String?                    @db.Text
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  participants conversation_participant[]
+  messages     message[]
+}
+
+model conversation_participant {
+  id             String           @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime         @default(now())
+  lastReadAt     DateTime         @default(now())
+  role           participant_role @default(MEMBER)
+  conversation   conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           user             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model message {
+  id             String               @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String               @db.Text
+  type           message_type         @default(TEXT)
+  replyToId      String?
+  isEdited       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  conversation   conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo        message?             @relation("MessageReply", fields: [replyToId], references: [id])
+  replies        message[]            @relation("MessageReply")
+  sender         user                 @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  attachments    message_attachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([replyToId], map: "message_replyToId_fkey")
+}
+
+model message_attachment {
+  id        String          @id @default(cuid())
+  messageId String
+  type      attachment_type
+  url       String          @db.VarChar(500)
+  filename  String?         @db.VarChar(255)
+  size      Int?
+  mimeType  String?         @db.VarChar(100)
+  createdAt DateTime        @default(now())
+  message   message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model social_link {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String   @db.VarChar(50)
+  url       String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+}
+
+model user_follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    user     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   user     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model user_block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   user     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   user     @relation("UserBlockers", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId], map: "user_block_blockedId_fkey")
+}
+
+model social_post {
+  id            String          @id @default(cuid())
+  authorId      String
+  content       String?         @db.Text
+  attachments   String?         @db.LongText
+  visibility    post_visibility @default(PUBLIC)
+  likesCount    Int             @default(0)
+  commentsCount Int             @default(0)
+  sharesCount   Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  comments      post_comment[]
+  likes         post_like[]
+  author        user            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([visibility])
+}
+
+model post_like {
+  id        String      @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime    @default(now())
+  post      social_post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      user        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId], map: "post_like_userId_fkey")
+}
+
+model post_comment {
+  id         String         @id @default(cuid())
+  postId     String
+  authorId   String
+  content    String         @db.Text
+  parentId   String?
+  likesCount Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  likes      comment_like[] @relation("CommentLikes")
+  author     user           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent     post_comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    post_comment[] @relation("CommentReplies")
+  post       social_post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model comment_like {
+  id        String       @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime     @default(now())
+  comment   post_comment @relation("CommentLikes", fields: [commentId], references: [id], onDelete: Cascade)
+  user      user         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId], map: "comment_like_userId_fkey")
+}
+
+model userprofile {
+  id                   String                      @id
+  userId               String                      @unique(map: "userProfile_userId_key")
+  bio                  String?                     @db.Text
+  location             String?                     @db.VarChar(255)
+  website              String?                     @db.VarChar(255)
+  favoriteMatcha       String?                     @db.VarChar(255)
+  experienceLevel      userprofile_experienceLevel @default(BEGINNER)
+  privacySettings      String?                     @db.LongText
+  notificationSettings String?                     @db.LongText
+  lastSeen             DateTime                    @default(now())
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime
+  user                 user                        @relation(fields: [userId], references: [id], onDelete: Cascade, map: "userProfile_userId_fkey")
+}
+
+model userstatus {
+  userId   String            @id
+  status   userstatus_status @default(OFFLINE)
+  lastSeen DateTime          @default(now())
+  user     user              @relation(fields: [userId], references: [id], onDelete: Cascade, map: "userStatus_userId_fkey")
+}
+
+enum achievement_type {
+  FIRST_FORUM_POST
+  FORUM_REGULAR
+  RECIPE_CREATOR
+  SOCIAL_BUTTERFLY
+  EXPLORER
+  EARLY_ADOPTER
+  PURCHASE_MASTER
+  BORDER_COLLECTOR
+  POINTS_COLLECTOR
+  DAILY_VISITOR
+  RECIPE_MASTER
+  FORUM_EXPERT
+  COMMENTATOR_PRO
+  ACTIVE_MEMBER
+  FRIEND_COLLECTOR
+  SOCIAL_INFLUENCER
+  CHAT_MASTER
+  POST_CHAMPION
+  POPULAR_USER
+  COMMUNITY_LEADER
+}
+
+enum activity_type {
+  FORUM_POST
+  FORUM_COMMENT
+  RECIPE_CREATED
+  RECIPE_LIKED
+  PURCHASE
+  PROFILE_UPDATE
+  BADGE_EARNED
+  FRIEND_REQUEST_SENT
+  FRIEND_REQUEST_ACCEPTED
+  FRIEND_ADDED
+  MESSAGE_SENT
+  SOCIAL_POST_CREATED
+  SOCIAL_POST_LIKED
+  SOCIAL_COMMENT_ADDED
+  USER_FOLLOWED
+  USER_UNFOLLOWED
+}
+
+enum pointtransaction_type {
+  EARNED
+  SPENT
+  ADMIN_GIVEN
+  REFUND
+}
+
+enum borderunlock_unlockType {
+  ACHIEVEMENT
+  PURCHASE
+  ADMIN
+}
+
+enum user_role {
+  USER
+  ADMIN
+}
+
+enum forum_likes_target_type {
+  thread
+  reply
+}
+
+enum border_rarity {
+  Default
+  Common
+  Uncommon
+  Rare
+  Epic
+  Legendary
+  Mythic
+  Bronze
+  Silver
+  Gold
+}
+
+enum request_status {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum conversation_type {
+  DIRECT
+  GROUP
+}
+
+enum message_type {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum attachment_type {
+  IMAGE
+  FILE
+  VIDEO
+}
+
+enum participant_role {
+  ADMIN
+  MEMBER
+}
+
+enum post_visibility {
+  PUBLIC
+  FRIENDS_ONLY
+  PRIVATE
+}
+
+enum userstatus_status {
+  ONLINE
+  AWAY
+  BUSY
+  OFFLINE
+}
+
+enum userprofile_experienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  EXPERT
+}

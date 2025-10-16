@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .upload-area { border: 2px dashed #ccc; padding: 20px; margin: 20px 0; text-align: center; }
+        .result { margin: 20px 0; padding: 10px; background: #f5f5f5; }
+        img { max-width: 200px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Upload Test</h1>
+
+        <div class="upload-area">
+            <input type="file" id="imageInput" accept="image/*" />
+            <br><br>
+            <button onclick="uploadImage()">Upload Image</button>
+        </div>
+
+        <div id="result" class="result" style="display: none;">
+            <h3>Upload Result:</h3>
+            <pre id="resultText"></pre>
+            <div id="imagePreview"></div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageInput');
+            const resultDiv = document.getElementById('result');
+            const resultText = document.getElementById('resultText');
+            const imagePreview = document.getElementById('imagePreview');
+
+            if (!fileInput.files[0]) {
+                alert('Please select an image first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                console.log('Starting upload...');
+                const response = await fetch('/api/upload/image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                resultText.textContent = JSON.stringify(data, null, 2);
+
+                if (data.success && data.data.url) {
+                    imagePreview.innerHTML = `<img src="${data.data.url}" alt="Uploaded image" />`;
+                } else {
+                    imagePreview.innerHTML = `<p style="color: red;">Upload failed: ${data.error || 'Unknown error'}</p>`;
+                }
+
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                resultText.textContent = 'Error: ' + error.message;
+                imagePreview.innerHTML = '<p style="color: red;">Upload failed!</p>';
+                resultDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
